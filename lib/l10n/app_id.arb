@@ -1,0 +1,191 @@
+{
+  "@@locale": "id",
+  
+  "appName": "ExVen POS",
+  
+  "appTitle": "ExVen POS",
+  
+  "appVersion": "Versi {version}",
+  
+  "loading": "Memuat...",
+  
+  "error": "Kesalahan",
+  
+  "success": "Berhasil",
+  
+  "yes": "Ya",
+  
+  "no": "Tidak",
+  
+  "cancel": "Batal",
+  
+  "confirm": "Konfirmasi",
+  
+  "save": "Simpan",
+  
+  "delete": "Hapus",
+  
+  "next": "Selanjutnya",
+  
+  "previous": "Sebelumnya",
+  
+  "done": "Selesai",
+  
+  "retry": "Coba Lagi",
+  
+  "login": "Masuk",
+  
+  "logout": "Keluar",
+  
+  "register": "Daftar",
+  
+  "email": "Email",
+  
+  "password": "Kata Sandi",
+  
+  "confirmPassword": "Konfirmasi Kata Sandi",
+  
+  "rememberMe": "Ingat saya",
+  
+  "forgotPassword": "Lupa Kata Sandi?",
+  
+  "invalidEmail": "Mohon masukkan alamat email yang valid",
+  
+  "invalidPassword": "Kata sandi harus minimal 8 karakter",
+  
+  "loginSuccess": "Berhasil masuk",
+  
+  "loginFailed": "Gagal masuk. Mohon periksa kredensial Anda",
+  
+  "dashboard": "Dasbor",
+  
+  "products": "Produk",
+  
+  "customers": "Pelanggan",
+  
+  "transactions": "Transaksi",
+  
+  "reports": "Laporan",
+  
+  "settings": "Pengaturan",
+  
+  "profile": "Profil",
+  
+  "home": "Beranda",
+  
+  "back": "Kembali",
+  
+  "menu": "Menu",
+  
+  "requiredField": "Kolom ini wajib diisi",
+  
+  "invalidFormat": "Format tidak valid",
+  
+  "fieldTooShort": "Kolom terlalu pendek",
+  
+  "fieldTooLong": "Kolom terlalu panjang",
+  
+  "passwordRequirements": "Kata sandi harus mengandung minimal 8 karakter, termasuk huruf besar, huruf kecil, dan angka",
+  
+  "formSaved": "Form berhasil disimpan",
+  
+  "formError": "Gagal menyimpan form. Silakan coba lagi",
+  
+  "productName": "Nama Produk",
+  
+  "productCode": "Kode Produk",
+  
+  "price": "Harga",
+  
+  "category": "Kategori",
+  
+  "stock": "Stok",
+  
+  "description": "Deskripsi",
+  
+  "addProduct": "Tambah Produk",
+  
+  "editProduct": "Edit Produk",
+  
+  "deleteProduct": "Hapus Produk",
+  
+  "productSaved": "Produk berhasil disimpan",
+  
+  "productDeleted": "Produk berhasil dihapus",
+  
+  "customer": "Pelanggan",
+  
+  "transaction": "Transaksi",
+  
+  "payment": "Pembayaran",
+  
+  "discount": "Diskon",
+  
+  "tax": "Pajak",
+  
+  "total": "Total",
+  
+  "subtotal": "Subtotal",
+  
+  "cash": "Tunai",
+  
+  "card": "Kartu",
+  
+  "transfer": "Transfer",
+  
+  "networkError": "Kesalahan jaringan. Mohon periksa koneksi internet Anda",
+  
+  "serverError": "Kesalahan server. Silakan coba lagi nanti",
+  
+  "unauthorizedAccess": "Akses tidak sah",
+  
+  "forbidden": "Akses dilarang",
+  
+  "notFound": "Tidak ditemukan",
+  
+  "validationError": "Kesalahan validasi. Mohon periksa input Anda",
+  
+  "analytics": "Analitik",
+  
+  "salesReport": "Laporan Penjualan",
+  
+  "inventory": "Inventori",
+  
+  "cashier": "Kasir",
+  
+  "manager": "Manajer",
+  
+  "owner": "Pemilik",
+  
+  "outlet": "Cabang",
+  
+  "tenant": "Tenant",
+  
+  "language": "Bahasa",
+  
+  "theme": "Tema",
+  
+  "currency": "Mata Uang",
+  
+  "dateFormat": "Format Tanggal",
+  
+  "timeFormat": "Format Waktu",
+  
+  "search": "Cari",
+  
+  "filter": "Filter",
+  
+  "sort": "Urutkan",
+  
+  "refresh": "Segarkan",
+  
+  "noDataFound": "Data tidak ditemukan",
+  
+  "emptyList": "Daftar kosong",
+  
+  "pullToRefresh": "Tarik untuk menyegarkan",
+  
+  "releaseToRefresh": "Lepas untuk menyegarkan",
+  
+  "refreshing": "Menyegarkan..."
+}
