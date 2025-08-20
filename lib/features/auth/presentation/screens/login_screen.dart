@@ -57,7 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Future<void> _handleSignIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await ref.read(authProvider.notifier).signIn(
+    final success = await ref.read(authProvider.notifier).login(
       _emailController.text.trim(),
       _passwordController.text,
     );
@@ -383,13 +383,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             // Forgot Password
                             Center(
                               child: TextButton(
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Forgot password feature coming soon!'),
-                                    ),
-                                  );
-                                },
+                                onPressed: () => context.go('/reset-password'),
                                 child: Text(
                                   'Forgot Password?',
                                   style: TextStyle(
@@ -407,28 +401,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     const SizedBox(height: 40),
                     
                     // Create Account Button
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.primaryBlue, width: 2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
+                    GestureDetector(
+                      onTap: () => context.go('/register'),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.primaryBlue, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'Create new account',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppTheme.primaryBlue,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
-                      ),
-                      child: const Text(
-                        'Create new account',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

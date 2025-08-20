@@ -1,63 +1,59 @@
-class User {
-  final String id;
+import 'package:equatable/equatable.dart';
+
+import 'role.dart';
+
+class User extends Equatable {
+  final int id;
+  final int tenantId;
   final String email;
-  final String name;
-  final String? avatar;
-  final DateTime createdAt;
-  final DateTime? lastLoginAt;
+  final String fullName;
+  final String? phone;
+  final bool isActive;
+  final Role role;
 
   const User({
     required this.id,
+    required this.tenantId,
     required this.email,
-    required this.name,
-    this.avatar,
-    required this.createdAt,
-    this.lastLoginAt,
+    required this.fullName,
+    this.phone,
+    required this.isActive,
+    required this.role,
   });
 
   User copyWith({
-    String? id,
+    int? id,
+    int? tenantId,
     String? email,
-    String? name,
-    String? avatar,
-    DateTime? createdAt,
-    DateTime? lastLoginAt,
+    String? fullName,
+    String? phone,
+    bool? isActive,
+    Role? role,
   }) {
     return User(
       id: id ?? this.id,
+      tenantId: tenantId ?? this.tenantId,
       email: email ?? this.email,
-      name: name ?? this.name,
-      avatar: avatar ?? this.avatar,
-      createdAt: createdAt ?? this.createdAt,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      fullName: fullName ?? this.fullName,
+      phone: phone ?? this.phone,
+      isActive: isActive ?? this.isActive,
+      role: role ?? this.role,
     );
   }
 
   @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-
-    return other is User &&
-        other.id == id &&
-        other.email == email &&
-        other.name == name &&
-        other.avatar == avatar &&
-        other.createdAt == createdAt &&
-        other.lastLoginAt == lastLoginAt;
-  }
-
-  @override
-  int get hashCode {
-    return id.hashCode ^
-        email.hashCode ^
-        name.hashCode ^
-        avatar.hashCode ^
-        createdAt.hashCode ^
-        lastLoginAt.hashCode;
-  }
+  List<Object?> get props => [
+        id,
+        tenantId,
+        email,
+        fullName,
+        phone,
+        isActive,
+        role,
+      ];
 
   @override
   String toString() {
-    return 'User(id: $id, email: $email, name: $name, avatar: $avatar, createdAt: $createdAt, lastLoginAt: $lastLoginAt)';
+    return 'User(id: $id, tenantId: $tenantId, email: $email, fullName: $fullName, phone: $phone, isActive: $isActive, role: $role)';
   }
 }

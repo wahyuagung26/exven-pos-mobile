@@ -73,7 +73,7 @@ class ProductListScreen extends ConsumerWidget {
                           if (currentUser != null) ...[
                             const SizedBox(height: 4),
                             Text(
-                              'Welcome, ${currentUser.name}',
+                              'Welcome, ${currentUser.fullName}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade600,
@@ -112,8 +112,8 @@ class ProductListScreen extends ConsumerWidget {
                                 radius: 18,
                                 backgroundColor: AppTheme.primaryBlue,
                                 child: Text(
-                                  currentUser.name.isNotEmpty 
-                                      ? currentUser.name[0].toUpperCase()
+                                  currentUser.fullName.isNotEmpty 
+                                      ? currentUser.fullName[0].toUpperCase()
                                       : 'U',
                                   style: const TextStyle(
                                     color: Colors.white,
@@ -128,7 +128,7 @@ class ProductListScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    currentUser.name,
+                                    currentUser.fullName,
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -198,7 +198,7 @@ class ProductListScreen extends ConsumerWidget {
                               );
                               break;
                             case 'logout':
-                              ref.read(authProvider.notifier).signOut();
+                              ref.read(authProvider.notifier).logout();
                               context.go('/login');
                               break;
                           }

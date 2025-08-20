@@ -1,88 +1,192 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utils/dependency_injection.dart';
+import '../../domain/entities/auth_state.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/usecases/login.dart';
+import '../../domain/usecases/register.dart';
+import '../../domain/usecases/logout.dart';
+import '../../domain/usecases/get_current_user.dart';
+import '../../domain/usecases/change_password.dart';
+import '../../domain/usecases/reset_password.dart';
 
-class AuthState {
-  final User? user;
-  final bool isAuthenticated;
-  final bool isLoading;
-  final String? error;
-
-  const AuthState({
-    this.user,
-    this.isAuthenticated = false,
-    this.isLoading = false,
-    this.error,
-  });
-
-  AuthState copyWith({
-    User? user,
-    bool? isAuthenticated,
-    bool? isLoading,
-    String? error,
-  }) {
-    return AuthState(
-      user: user ?? this.user,
-      isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-    );
-  }
-}
+// Use Case Providers
+final loginProvider = Provider<Login>((ref) => getIt<Login>());
+final registerProvider = Provider<Register>((ref) => getIt<Register>());
+final logoutProvider = Provider<Logout>((ref) => getIt<Logout>());
+final getCurrentUserProvider = Provider<GetCurrentUser>((ref) => getIt<GetCurrentUser>());
+final changePasswordProvider = Provider<ChangePassword>((ref) => getIt<ChangePassword>());
+final resetPasswordProvider = Provider<ResetPassword>((ref) => getIt<ResetPassword>());
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState());
+  final Login _login;
+  final Register _register;
+  final Logout _logout;
+  final GetCurrentUser _getCurrentUser;
+  final ChangePassword _changePassword;
+  final ResetPassword _resetPassword;
 
-  Future<bool> signIn(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null);
-
-    try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
-
-      // Mock user data - in real app, this would come from API
-      final user = User(
-        id: '1',
-        email: email,
-        name: _getNameFromEmail(email),
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        lastLoginAt: DateTime.now(),
-      );
-
-      state = state.copyWith(
-        user: user,
-        isAuthenticated: true,
-        isLoading: false,
-      );
-
-      return true;
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Login failed: ${e.toString()}',
-      );
-      return false;
-    }
+  AuthNotifier(
+    this._login,
+    this._register,
+    this._logout,
+    this._getCurrentUser,
+    this._changePassword,
+    this._resetPassword,
+  ) : super(const AuthState.initial()) {
+    _checkAuthStatus();
   }
 
-  void signOut() {
-    state = const AuthState();
+  Future<void> _checkAuthStatus() async {
+    state = const AuthState.loading();
+    
+    final result = await _getCurrentUser();
+    
+    result.fold(
+      (failure) => state = AuthState.unauthenticated(error: failure.message),
+      (user) {
+        if (user != null) {
+          state = AuthState.authenticated(user);
+        } else {
+          state = const AuthState.unauthenticated();
+        }
+      },
+    );
+  }
+
+  Future<bool> login(String email, String password) async {
+    state = const AuthState.loading();
+
+    final result = await _login(LoginParams(
+      email: email,
+      password: password,
+    ));
+
+    return result.fold(
+      (failure) {
+        state = AuthState.error(failure.message);
+        return false;
+      },
+      (tokenPair) {
+        // Get user after successful login
+        _checkAuthStatus();
+        return true;
+      },
+    );
+  }
+
+  Future<bool> register({
+    required String tenantName,
+    String? businessType,
+    required String email,
+    String? phone,
+    required String password,
+    required String fullName,
+  }) async {
+    state = const AuthState.loading();
+
+    final result = await _register(RegisterParams(
+      tenantName: tenantName,
+      businessType: businessType,
+      email: email,
+      phone: phone,
+      password: password,
+      fullName: fullName,
+    ));
+
+    return result.fold(
+      (failure) {
+        state = AuthState.error(failure.message);
+        return false;
+      },
+      (user) {
+        state = AuthState.authenticated(user);
+        return true;
+      },
+    );
+  }
+
+  Future<bool> logout() async {
+    state = const AuthState.loading();
+
+    final result = await _logout();
+
+    return result.fold(
+      (failure) {
+        // Even if logout fails, clear local state
+        state = const AuthState.unauthenticated();
+        return false;
+      },
+      (_) {
+        state = const AuthState.unauthenticated();
+        return true;
+      },
+    );
+  }
+
+  Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final currentState = state;
+    state = state.copyWith(isLoading: true, error: null);
+
+    final result = await _changePassword(ChangePasswordParams(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    ));
+
+    return result.fold(
+      (failure) {
+        state = currentState.copyWith(
+          isLoading: false,
+          error: failure.message,
+        );
+        return false;
+      },
+      (_) {
+        state = currentState.copyWith(isLoading: false, error: null);
+        return true;
+      },
+    );
+  }
+
+  Future<bool> resetPassword(String email) async {
+    final currentState = state;
+    state = state.copyWith(isLoading: true, error: null);
+
+    final result = await _resetPassword(ResetPasswordParams(email: email));
+
+    return result.fold(
+      (failure) {
+        state = currentState.copyWith(
+          isLoading: false,
+          error: failure.message,
+        );
+        return false;
+      },
+      (_) {
+        state = currentState.copyWith(isLoading: false, error: null);
+        return true;
+      },
+    );
   }
 
   void clearError() {
     state = state.copyWith(error: null);
   }
-
-  String _getNameFromEmail(String email) {
-    final name = email.split('@').first;
-    return name.split('.').map((part) => 
-      part.isNotEmpty ? part[0].toUpperCase() + part.substring(1) : part
-    ).join(' ');
-  }
 }
 
+// Auth State Provider
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(
+    ref.read(loginProvider),
+    ref.read(registerProvider),
+    ref.read(logoutProvider),
+    ref.read(getCurrentUserProvider),
+    ref.read(changePasswordProvider),
+    ref.read(resetPasswordProvider),
+  );
 });
 
 // Convenience providers
