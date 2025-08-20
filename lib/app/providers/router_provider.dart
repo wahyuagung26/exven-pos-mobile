@@ -236,14 +236,6 @@ final routerProvider = Provider<GoRouter>((ref) {
 
     // Error handling
     errorBuilder: (context, state) => const NotFoundPage(),
-
-    // Handle deep link validation
-    onException: (context, state, router) {
-      // Log navigation errors in debug mode
-      if (AppConstants.enableDebugMode) {
-        debugPrint('Router Exception: ${state.error}');
-      }
-    },
   );
 });
 
