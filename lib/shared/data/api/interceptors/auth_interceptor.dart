@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import '../../../domain/failures/failures.dart';
 import '../../storage/secure_storage.dart';
 
 class AuthInterceptor extends Interceptor {

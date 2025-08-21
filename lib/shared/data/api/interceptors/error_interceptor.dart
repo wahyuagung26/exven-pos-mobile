@@ -4,8 +4,6 @@ import '../../../domain/failures/failures.dart';
 class ErrorInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    final failure = _mapDioErrorToFailure(err);
-    
     // You can add global error handling here
     // Example: show global error dialog, log to analytics, etc.
     
@@ -24,7 +22,7 @@ class ErrorInterceptor extends Interceptor {
       
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 'Server error occurred';
+        final message = (error.response?.data?['message'] as String?) ?? 'Server error occurred';
         
         switch (statusCode) {
           case 400:
@@ -46,7 +44,10 @@ class ErrorInterceptor extends Interceptor {
       case DioExceptionType.cancel:
         return const Failure.network('Request was cancelled');
       
-      default:
+      case DioExceptionType.badCertificate:
+        return const Failure.network('Security certificate error');
+      
+      case DioExceptionType.unknown:
         return Failure.unknown(error.message ?? 'An unexpected error occurred');
     }
   }
