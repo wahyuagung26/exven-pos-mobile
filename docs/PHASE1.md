@@ -1,652 +1,592 @@
-# Flutter POS Client: Simplified Clean Architecture
+# PHASE 1 - Development Architecture (Offline-First MVP)
 
-## 🎯 Core Principles (Anti-Hallucination Design)
+> **Goal:** Implementasi MVP offline-first dengan fitur core POS tanpa sync cloud. Target: 2-3 bulan development.
 
-1. **Minimal Viable Structure** - Hanya folder yang benar-benar dibutuhkan
-2. **Consistent Naming** - Strict conventions tanpa pengecualian
-3. **Clear Decision Trees** - Kapan pakai pattern apa
-4. **Complete Examples** - Implementasi lengkap, bukan skeleton
-5. **MVP-First Approach** - Kompleksitas bertahap
+---
 
-## 📁 Simplified Project Structure
+## 1) Scope Phase 1
+
+### ✅ Features yang Diimplementasi
+- **Authentication offline** (PIN/password lokal)
+- **Product management** (CRUD, kategorisasi, stock tracking)
+- **Transaction processing** (penjualan, multiple payment)
+- **Cash shift management** (buka/tutup kasir)
+- **Basic reporting** (harian, mingguan, bulanan)
+- **Expense tracking** sederhana
+- **Receipt printing** (Bluetooth thermal printer)
+- **Data export** (PDF, Excel)
+
+### ❌ Features yang Ditunda ke Phase 2
+- Cloud sync & backup
+- Multi-device support
+- WhatsApp integration
+- QRIS integration
+- Customer loyalty program
+- Advanced analytics
+
+---
+
+## 2) Tech Stack & Dependencies
+
+### 2.1 Core Framework
+```yaml
+# pubspec.yaml - Core dependencies
+dependencies:
+  flutter: ^3.19.0
+  
+  # State Management
+  flutter_riverpod: ^2.4.10
+  riverpod_annotation: ^2.3.4
+  
+  # Local Database
+  sqflite: ^2.3.2
+  sqlite3_flutter_libs: ^0.5.20
+  
+  # Navigation
+  go_router: ^13.2.0
+  
+  # Data Models & Serialization
+  freezed: ^2.4.7
+  json_annotation: ^4.8.1
+  
+  # Local Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+  
+  # UI/UX
+  flutter_localizations: ^any
+  intl: ^0.19.0
+  material_design_icons_flutter: ^7.0.7296
+  
+  # Utils
+  uuid: ^4.3.3
+  path: ^1.8.3
+  file_picker: ^6.1.1
+  
+  # Printing
+  bluetooth_thermal_printer: ^0.0.6
+  
+  # PDF Generation
+  pdf: ^3.10.7
+  printing: ^5.12.0
+  
+  # Excel Export
+  excel: ^4.0.3
+
+dev_dependencies:
+  # Code Generation
+  build_runner: ^2.4.8
+  freezed: ^2.4.7
+  json_serializable: ^6.7.1
+  riverpod_generator: ^2.3.9
+  
+  # Testing
+  flutter_test: ^any
+  mockito: ^5.4.4
+  fake_async: ^1.3.1
+```
+
+### 2.2 Architecture Pattern
+- **Clean Architecture** dengan feature-based modules
+- **Repository Pattern** untuk data access abstraction
+- **Riverpod** untuk dependency injection & state management
+- **Freezed** untuk immutable data classes
+- **Code Generation** untuk boilerplate reduction
+
+---
+
+## 3) Project Structure
 
 ```
-pos_flutter/
+jagokasir/
 ├── lib/
-│   ├── main.dart
+│   ├── main.dart                    # App entry point
 │   ├── app/
-│   │   ├── app.dart                 # Main app widget
-│   │   ├── router.dart              # GoRouter setup
-│   │   └── providers.dart           # Global providers
+│   │   ├── app.dart                 # MaterialApp setup
+│   │   ├── router.dart              # GoRouter configuration
+│   │   └── providers.dart           # Global providers (DB, etc)
+│   │
 │   ├── features/
 │   │   ├── auth/
 │   │   │   ├── data/
-│   │   │   │   ├── models/          # JSON models only
-│   │   │   │   ├── sources/         # API & local data
-│   │   │   │   └── repository.dart  # Repository implementation
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── user_model.dart
+│   │   │   │   │   └── auth_session_model.dart
+│   │   │   │   ├── sources/
+│   │   │   │   │   ├── auth_local_source.dart
+│   │   │   │   │   └── secure_storage_source.dart
+│   │   │   │   └── auth_repository_impl.dart
 │   │   │   ├── domain/
-│   │   │   │   ├── entities/        # Business objects
-│   │   │   │   ├── repository.dart  # Repository interface
-│   │   │   │   └── usecases/        # Business logic
+│   │   │   │   ├── entities/
+│   │   │   │   │   ├── user.dart
+│   │   │   │   │   └── auth_session.dart
+│   │   │   │   ├── auth_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── login_usecase.dart
+│   │   │   │       ├── logout_usecase.dart
+│   │   │   │       └── check_auth_usecase.dart
 │   │   │   ├── ui/
-│   │   │   │   ├── pages/           # Screen widgets
-│   │   │   │   └── widgets/         # UI components
-│   │   │   └── providers.dart       # Feature providers
-│   │   └── products/
-│   │       └── [same structure as auth]
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── login_page.dart
+│   │   │   │   │   └── setup_page.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── pin_input_widget.dart
+│   │   │   │       └── auth_form_widget.dart
+│   │   │   └── providers.dart
+│   │   │
+│   │   ├── products/
+│   │   │   ├── data/
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── product_model.dart
+│   │   │   │   │   └── category_model.dart
+│   │   │   │   ├── sources/
+│   │   │   │   │   └── products_local_source.dart
+│   │   │   │   └── products_repository_impl.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   ├── product.dart
+│   │   │   │   │   └── product_category.dart
+│   │   │   │   ├── products_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── get_products_usecase.dart
+│   │   │   │       ├── save_product_usecase.dart
+│   │   │   │       └── update_stock_usecase.dart
+│   │   │   ├── ui/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── products_page.dart
+│   │   │   │   │   ├── product_form_page.dart
+│   │   │   │   │   └── categories_page.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── product_card.dart
+│   │   │   │       ├── product_search.dart
+│   │   │   │       └── stock_indicator.dart
+│   │   │   └── providers.dart
+│   │   │
+│   │   ├── sales/
+│   │   │   ├── data/
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── transaction_model.dart
+│   │   │   │   │   ├── transaction_item_model.dart
+│   │   │   │   │   └── cash_shift_model.dart
+│   │   │   │   ├── sources/
+│   │   │   │   │   └── sales_local_source.dart
+│   │   │   │   └── sales_repository_impl.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   ├── transaction.dart
+│   │   │   │   │   ├── transaction_item.dart
+│   │   │   │   │   ├── cash_shift.dart
+│   │   │   │   │   └── cart.dart
+│   │   │   │   ├── sales_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── create_transaction_usecase.dart
+│   │   │   │       ├── manage_cart_usecase.dart
+│   │   │   │       ├── open_shift_usecase.dart
+│   │   │   │       └── close_shift_usecase.dart
+│   │   │   ├── ui/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── pos_page.dart
+│   │   │   │   │   ├── payment_page.dart
+│   │   │   │   │   └── shift_management_page.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── product_grid.dart
+│   │   │   │       ├── cart_widget.dart
+│   │   │   │       ├── payment_methods.dart
+│   │   │   │       └── receipt_preview.dart
+│   │   │   └── providers.dart
+│   │   │
+│   │   ├── reports/
+│   │   │   ├── data/
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── sales_summary_model.dart
+│   │   │   │   │   └── report_filter_model.dart
+│   │   │   │   ├── sources/
+│   │   │   │   │   └── reports_local_source.dart
+│   │   │   │   └── reports_repository_impl.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   ├── sales_summary.dart
+│   │   │   │   │   ├── product_performance.dart
+│   │   │   │   │   └── report_filter.dart
+│   │   │   │   ├── reports_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── generate_sales_report_usecase.dart
+│   │   │   │       ├── export_pdf_usecase.dart
+│   │   │   │       └── export_excel_usecase.dart
+│   │   │   ├── ui/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── reports_page.dart
+│   │   │   │   │   └── report_detail_page.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── sales_chart.dart
+│   │   │   │       ├── report_filter.dart
+│   │   │   │       └── export_buttons.dart
+│   │   │   └── providers.dart
+│   │   │
+│   │   ├── expenses/
+│   │   │   ├── data/
+│   │   │   │   ├── models/
+│   │   │   │   │   └── expense_model.dart
+│   │   │   │   ├── sources/
+│   │   │   │   │   └── expenses_local_source.dart
+│   │   │   │   └── expenses_repository_impl.dart
+│   │   │   ├── domain/
+│   │   │   │   ├── entities/
+│   │   │   │   │   └── expense.dart
+│   │   │   │   ├── expenses_repository.dart
+│   │   │   │   └── usecases/
+│   │   │   │       ├── add_expense_usecase.dart
+│   │   │   │       └── get_expenses_usecase.dart
+│   │   │   ├── ui/
+│   │   │   │   ├── pages/
+│   │   │   │   │   ├── expenses_page.dart
+│   │   │   │   │   └── expense_form_page.dart
+│   │   │   │   └── widgets/
+│   │   │   │       ├── expense_card.dart
+│   │   │   │       └── expense_categories.dart
+│   │   │   └── providers.dart
+│   │   │
+│   │   └── settings/
+│   │       ├── data/
+│   │       │   ├── models/
+│   │       │   │   ├── outlet_model.dart
+│   │       │   │   └── app_settings_model.dart
+│   │       │   ├── sources/
+│   │       │   │   └── settings_local_source.dart
+│   │       │   └── settings_repository_impl.dart
+│   │       ├── domain/
+│   │       │   ├── entities/
+│   │       │   │   ├── outlet.dart
+│   │       │   │   └── app_settings.dart
+│   │       │   ├── settings_repository.dart
+│   │       │   └── usecases/
+│   │       │       ├── update_outlet_usecase.dart
+│   │       │       └── manage_settings_usecase.dart
+│   │       ├── ui/
+│   │       │   ├── pages/
+│   │       │   │   ├── settings_page.dart
+│   │       │   │   ├── outlet_settings_page.dart
+│   │       │   │   └── printer_settings_page.dart
+│   │       │   └── widgets/
+│   │       │       ├── settings_tile.dart
+│   │       │       └── printer_test_widget.dart
+│   │       └── providers.dart
+│   │
 │   ├── shared/
 │   │   ├── data/
-│   │   │   ├── api/                 # HTTP client & interceptors
-│   │   │   └── storage/             # Secure storage
+│   │   │   ├── database/
+│   │   │   │   ├── database_helper.dart
+│   │   │   │   ├── migrations/
+│   │   │   │   │   └── migration_v1.dart
+│   │   │   │   └── tables/
+│   │   │   │       ├── base_table.dart
+│   │   │   │       ├── products_table.dart
+│   │   │   │       ├── transactions_table.dart
+│   │   │   │       └── outlets_table.dart
+│   │   │   ├── storage/
+│   │   │   │   ├── secure_storage.dart
+│   │   │   │   └── shared_preferences_helper.dart
+│   │   │   └── printing/
+│   │   │       ├── thermal_printer.dart
+│   │   │       └── receipt_generator.dart
+│   │   │
 │   │   ├── domain/
-│   │   │   ├── entities/            # Common entities
-│   │   │   └── failures/            # Error types
+│   │   │   ├── entities/
+│   │   │   │   ├── base_entity.dart
+│   │   │   │   └── api_response.dart
+│   │   │   └── failures/
+│   │   │       ├── database_failure.dart
+│   │   │       ├── validation_failure.dart
+│   │   │       └── printer_failure.dart
+│   │   │
 │   │   ├── ui/
-│   │   │   ├── theme/               # App theme
-│   │   │   └── widgets/             # Common widgets
+│   │   │   ├── theme/
+│   │   │   │   ├── app_theme.dart
+│   │   │   │   ├── app_colors.dart
+│   │   │   │   └── app_text_styles.dart
+│   │   │   └── widgets/
+│   │   │       ├── loading_widget.dart
+│   │   │       ├── error_widget.dart
+│   │   │       ├── empty_state_widget.dart
+│   │   │       ├── currency_input.dart
+│   │   │       ├── barcode_scanner.dart
+│   │   │       └── confirmation_dialog.dart
+│   │   │
 │   │   └── utils/
 │   │       ├── constants.dart
 │   │       ├── extensions.dart
-│   │       └── helpers.dart
-│   └── l10n/                        # Localization
-├── test/                            # Tests mirror lib structure
-└── assets/                          # Static assets
+│   │       ├── validators.dart
+│   │       ├── formatters.dart
+│   │       ├── uuid_generator.dart
+│   │       └── date_helpers.dart
+│   │
+│   └── l10n/
+│       ├── app_localizations.dart
+│       ├── app_id.arb
+│       └── app_en.arb
+│
+├── test/
+│   ├── unit/
+│   │   ├── features/
+│   │   │   ├── auth/
+│   │   │   ├── products/
+│   │   │   └── sales/
+│   │   └── shared/
+│   ├── integration/
+│   │   └── database_test.dart
+│   └── widget/
+│       └── pos_page_test.dart
+│
+├── assets/
+│   ├── images/
+│   │   ├── logo.png
+│   │   └── icons/
+│   ├── fonts/
+│   └── config/
+│       └── database_schema.sql
+│
+├── android/
+├── ios/
+├── pubspec.yaml
+└── README.md
 ```
 
-## 🏗️ Architecture Decision Trees
+---
 
-### Provider Selection Matrix
+## 4) Core Components Deep Dive
 
-| Use Case | Provider Type | Example |
-|----------|---------------|---------|
-| Repository/Service injection | `Provider<T>` | `Provider<AuthRepository>` |
-| UI state with mutations | `StateNotifierProvider` | `StateNotifierProvider<LoginNotifier, LoginState>` |
-| One-time async operation | `FutureProvider` | `FutureProvider<UserEntity>` |
-| Real-time data stream | `StreamProvider` | `StreamProvider<List<Product>>` |
-| Computed values | `Provider` | `Provider<bool>((ref) => ref.watch(authProvider).isLoggedIn)` |
-
-### File Naming Convention (STRICT)
-
-```
-Files: snake_case.dart
-Classes: PascalCase
-Variables: camelCase
-Constants: SCREAMING_SNAKE_CASE
-
-✅ EXAMPLES:
-auth_repository.dart -> class AuthRepository
-login_usecase.dart -> class LoginUseCase  
-api_constants.dart -> class ApiConstants
-```
-
-## 🔐 Simplified Authentication System
-
-### Complete Auth State Management
-
+### 4.1 Database Layer
 ```dart
-// features/auth/providers.dart
-@freezed
-class AuthState with _$AuthState {
-  const factory AuthState.initial() = _Initial;
-  const factory AuthState.loading() = _Loading;
-  const factory AuthState.authenticated(UserEntity user) = _Authenticated;
-  const factory AuthState.unauthenticated() = _Unauthenticated;
-  const factory AuthState.error(String message) = _Error;
-}
-
-class AuthNotifier extends StateNotifier<AuthState> {
-  final LoginUseCase _loginUseCase;
-  final LogoutUseCase _logoutUseCase;
-  final GetCurrentUserUseCase _getCurrentUserUseCase;
-
-  AuthNotifier(this._loginUseCase, this._logoutUseCase, this._getCurrentUserUseCase) 
-    : super(const AuthState.initial());
-
-  Future<void> checkAuthStatus() async {
-    state = const AuthState.loading();
+// shared/data/database/database_helper.dart
+class DatabaseHelper {
+  static Database? _database;
+  
+  static Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDB();
+    return _database!;
+  }
+  
+  static Future<Database> _initDB() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'jagokasir.db');
     
-    final result = await _getCurrentUserUseCase();
-    result.fold(
-      (failure) => state = const AuthState.unauthenticated(),
-      (user) => state = AuthState.authenticated(user),
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
-
-  Future<void> login(String email, String password) async {
-    state = const AuthState.loading();
-    
-    final result = await _loginUseCase(LoginParams(email, password));
-    result.fold(
-      (failure) => state = AuthState.error(failure.message),
-      (user) => state = AuthState.authenticated(user),
-    );
-  }
-
-  Future<void> logout() async {
-    await _logoutUseCase();
-    state = const AuthState.unauthenticated();
-  }
-}
-
-// Provider definitions
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl(
-    remoteDataSource: ref.read(authRemoteDataSourceProvider),
-    secureStorage: ref.read(secureStorageProvider),
-  );
-});
-
-final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
-  return LoginUseCase(ref.read(authRepositoryProvider));
-});
-
-final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
-  return LogoutUseCase(ref.read(authRepositoryProvider));
-});
-
-final getCurrentUserUseCaseProvider = Provider<GetCurrentUserUseCase>((ref) {
-  return GetCurrentUserUseCase(ref.read(authRepositoryProvider));
-});
-
-final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(
-    ref.read(loginUseCaseProvider),
-    ref.read(logoutUseCaseProvider),
-    ref.read(getCurrentUserUseCaseProvider),
-  );
-});
-
-// Computed providers for common checks
-final isAuthenticatedProvider = Provider<bool>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.maybeWhen(
-    authenticated: (_) => true,
-    orElse: () => false,
-  );
-});
-
-final currentUserProvider = Provider<UserEntity?>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  return authState.maybeWhen(
-    authenticated: (user) => user,
-    orElse: () => null,
-  );
-});
-```
-
-### Simplified Access Control
-
-```dart
-// shared/ui/widgets/access_guard.dart
-class AccessGuard extends ConsumerWidget {
-  final Widget child;
-  final Widget? fallback;
-  final List<String>? requiredPermissions;
-  final List<UserRole>? allowedRoles;
-  final bool requireAuth;
-
-  const AccessGuard({
-    super.key,
-    required this.child,
-    this.fallback,
-    this.requiredPermissions,
-    this.allowedRoles,
-    this.requireAuth = true,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authNotifierProvider);
-    
-    return authState.when(
-      initial: () => const LoadingWidget(),
-      loading: () => const LoadingWidget(),
-      authenticated: (user) {
-        // Check permissions
-        if (requiredPermissions != null) {
-          final hasPermissions = requiredPermissions!.every(
-            (permission) => user.permissions.contains(permission),
-          );
-          if (!hasPermissions) {
-            return fallback ?? const UnauthorizedWidget();
-          }
-        }
-        
-        // Check roles
-        if (allowedRoles != null) {
-          if (!allowedRoles!.contains(user.role)) {
-            return fallback ?? const UnauthorizedWidget();
-          }
-        }
-        
-        return child;
-      },
-      unauthenticated: () => requireAuth ? (fallback ?? const LoginPromptWidget()) : child,
-      error: (message) => ErrorWidget(message: message),
-    );
-  }
-}
-
-// Usage examples:
-AccessGuard(
-  requiredPermissions: ['products.manage'],
-  child: ProductManagementPage(),
-)
-
-AccessGuard(
-  allowedRoles: [UserRole.admin, UserRole.manager],
-  child: ReportsPage(),
-)
-```
-
-## 🌐 Complete HTTP Client Setup
-
-```dart
-// shared/data/api/api_client.dart
-class ApiClient {
-  static Dio? _instance;
   
-  static Dio get instance {
-    _instance ??= _createDio();
-    return _instance!;
-  }
-  
-  static Dio _createDio() {
-    final dio = Dio(BaseOptions(
-      baseUrl: ApiConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      receiveTimeout: const Duration(seconds: 30),
-      headers: {'Content-Type': 'application/json'},
-    ));
-    
-    dio.interceptors.addAll([
-      AuthInterceptor(),
-      TenantInterceptor(), 
-      LoggingInterceptor(),
-      ErrorInterceptor(),
-    ]);
-    
-    return dio;
-  }
-}
-
-// Complete interceptor implementations
-class AuthInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final storage = GetIt.instance<SecureStorage>();
-    final token = await storage.getToken();
-    
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-    }
-    
-    handler.next(options);
-  }
-  
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401) {
-      // Handle token expiry
-      final storage = GetIt.instance<SecureStorage>();
-      await storage.deleteToken();
-      
-      // Navigate to login - use your navigation method
-      GetIt.instance<AppRouter>().go('/login');
-    }
-    
-    handler.next(err);
-  }
-}
-
-class TenantInterceptor extends Interceptor {
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final storage = GetIt.instance<SecureStorage>();
-    final tenantId = await storage.getTenantId();
-    
-    if (tenantId != null) {
-      options.headers['X-Tenant-ID'] = tenantId;
-    }
-    
-    handler.next(options);
-  }
-}
-
-class ErrorInterceptor extends Interceptor {
-  @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
-    final failure = _mapDioErrorToFailure(err);
-    
-    // Log error for debugging
-    debugPrint('API Error: ${failure.message}');
-    
-    // You can show global error handling here if needed
-    
-    handler.next(err);
-  }
-  
-  NetworkFailure _mapDioErrorToFailure(DioException error) {
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return const NetworkFailure('Connection timeout');
-      case DioExceptionType.connectionError:
-        return const NetworkFailure('No internet connection');
-      case DioExceptionType.badResponse:
-        final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 'Server error';
-        return NetworkFailure(message, statusCode);
-      default:
-        return const NetworkFailure('Something went wrong');
-    }
-  }
-}
-```
-
-## 📱 Complete Repository Pattern
-
-```dart
-// features/auth/domain/repository.dart
-abstract class AuthRepository {
-  Future<Either<Failure, UserEntity>> login(String email, String password);
-  Future<Either<Failure, void>> logout();
-  Future<Either<Failure, UserEntity>> getCurrentUser();
-}
-
-// features/auth/data/repository.dart
-class AuthRepositoryImpl implements AuthRepository {
-  final AuthRemoteDataSource _remoteDataSource;
-  final SecureStorage _secureStorage;
-
-  AuthRepositoryImpl(this._remoteDataSource, this._secureStorage);
-
-  @override
-  Future<Either<Failure, UserEntity>> login(String email, String password) async {
-    try {
-      final response = await _remoteDataSource.login(
-        LoginRequestModel(email: email, password: password),
-      );
-      
-      // Save token
-      await _secureStorage.saveToken(response.token);
-      await _secureStorage.saveTenantId(response.user.tenantId.toString());
-      
-      return Right(response.user.toEntity());
-    } on DioException catch (e) {
-      return Left(_mapDioErrorToFailure(e));
-    } catch (e) {
-      return Left(UnknownFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> logout() async {
-    try {
-      await _remoteDataSource.logout();
-      await _secureStorage.deleteToken();
-      await _secureStorage.deleteTenantId();
-      return const Right(null);
-    } catch (e) {
-      // Even if API call fails, clear local data
-      await _secureStorage.deleteToken();
-      await _secureStorage.deleteTenantId();
-      return const Right(null);
-    }
-  }
-
-  @override
-  Future<Either<Failure, UserEntity>> getCurrentUser() async {
-    try {
-      final token = await _secureStorage.getToken();
-      if (token == null) {
-        return const Left(AuthFailure('No token found'));
+  static Future<void> _createDB(Database db, int version) async {
+    // Execute schema_sqlite.sql
+    final schema = await rootBundle.loadString('assets/config/database_schema.sql');
+    final statements = schema.split(';');
+    for (final statement in statements) {
+      if (statement.trim().isNotEmpty) {
+        await db.execute(statement);
       }
-      
-      final userModel = await _remoteDataSource.getCurrentUser();
-      return Right(userModel.toEntity());
-    } on DioException catch (e) {
-      return Left(_mapDioErrorToFailure(e));
-    } catch (e) {
-      return Left(UnknownFailure(e.toString()));
-    }
-  }
-
-  NetworkFailure _mapDioErrorToFailure(DioException error) {
-    // Same mapping as in ErrorInterceptor
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-        return const NetworkFailure('Connection timeout');
-      case DioExceptionType.connectionError:
-        return const NetworkFailure('No internet connection');
-      case DioExceptionType.badResponse:
-        final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 'Server error';
-        return NetworkFailure(message, statusCode);
-      default:
-        return const NetworkFailure('Something went wrong');
     }
   }
 }
 ```
 
-## 🚀 Router Setup with Authentication
+### 4.2 State Management Pattern
+```dart
+// features/sales/providers.dart
+@riverpod
+class CartNotifier extends _$CartNotifier {
+  @override
+  Cart build() => Cart.empty();
+  
+  void addItem(Product product, int quantity) {
+    final updatedCart = state.addItem(
+      CartItem(
+        product: product,
+        quantity: quantity,
+        unitPrice: product.sellingPrice,
+      ),
+    );
+    state = updatedCart;
+  }
+  
+  void removeItem(String productId) {
+    state = state.removeItem(productId);
+  }
+  
+  void clear() {
+    state = Cart.empty();
+  }
+}
 
+@riverpod
+Future<List<Transaction>> salesHistory(SalesHistoryRef ref) async {
+  final repository = ref.watch(salesRepositoryProvider);
+  return await repository.getTransactions();
+}
+```
+
+### 4.3 Navigation Structure
 ```dart
 // app/router.dart
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
-  
+final goRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
-    redirect: (context, state) {
-      final isAuthenticated = authState.maybeWhen(
-        authenticated: (_) => true,
-        orElse: () => false,
-      );
-      
-      final isAuthenticating = authState.maybeWhen(
-        loading: () => true,
-        initial: () => true,
-        orElse: () => false,
-      );
-      
-      // Public routes
-      final publicRoutes = ['/login', '/splash'];
-      final isPublicRoute = publicRoutes.contains(state.location);
-      
-      // If still checking auth status, stay on current route
-      if (isAuthenticating && state.location == '/splash') {
-        return null;
-      }
-      
-      // If not authenticated, redirect to login (except for public routes)
-      if (!isAuthenticated && !isPublicRoute) {
-        return '/login';
-      }
-      
-      // If authenticated and on public route, redirect to dashboard
-      if (isAuthenticated && isPublicRoute) {
-        return '/dashboard';
-      }
-      
-      return null; // No redirect needed
-    },
     routes: [
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashPage(),
       ),
       GoRoute(
-        path: '/login',
+        path: '/auth',
         builder: (context, state) => const LoginPage(),
       ),
-      GoRoute(
-        path: '/dashboard',
-        builder: (context, state) => const DashboardPage(),
-      ),
-      GoRoute(
-        path: '/products',
-        builder: (context, state) => const ProductsPage(),
+      ShellRoute(
+        builder: (context, state, child) => MainLayout(child: child),
+        routes: [
+          GoRoute(
+            path: '/pos',
+            builder: (context, state) => const PosPage(),
+          ),
+          GoRoute(
+            path: '/products',
+            builder: (context, state) => const ProductsPage(),
+            routes: [
+              GoRoute(
+                path: '/add',
+                builder: (context, state) => const ProductFormPage(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/reports',
+            builder: (context, state) => const ReportsPage(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsPage(),
+          ),
+        ],
       ),
     ],
   );
 });
 ```
 
-## 📋 Complete Dependencies
+---
 
+## 5) Development Roadmap
+
+### Week 1-2: Foundation Setup
+- [ ] Project initialization & dependencies
+- [ ] Database schema implementation
+- [ ] Shared utilities & theme
+- [ ] Basic navigation structure
+
+### Week 3-4: Authentication & Settings
+- [ ] Offline authentication system
+- [ ] Outlet setup & configuration
+- [ ] Basic app settings
+- [ ] Onboarding flow
+
+### Week 5-7: Product Management
+- [ ] Product CRUD operations
+- [ ] Category management
+- [ ] Stock tracking
+- [ ] Barcode scanning integration
+
+### Week 8-10: POS Core Features
+- [ ] Transaction processing
+- [ ] Cart management
+- [ ] Payment methods
+- [ ] Receipt generation & printing
+
+### Week 11-12: Reports & Exports
+- [ ] Sales reporting
+- [ ] Basic analytics
+- [ ] PDF/Excel export
+- [ ] Cash shift management
+
+### Week 13: Testing & Polish
+- [ ] Unit tests coverage
+- [ ] Integration testing
+- [ ] UI/UX improvements
+- [ ] Performance optimization
+
+---
+
+## 6) Testing Strategy
+
+### 6.1 Unit Tests
+- **Repository pattern testing** dengan mock data sources
+- **Use case testing** untuk business logic validation
+- **Provider testing** untuk state management
+
+### 6.2 Integration Tests
+- **Database operations** dengan real SQLite
+- **Complete user flows** (create product → add to cart → checkout)
+
+### 6.3 Widget Tests
+- **POS page functionality**
+- **Form validations**
+- **Navigation flows**
+
+---
+
+## 7) Deployment & Distribution
+
+### 7.1 Build Configuration
 ```yaml
-# pubspec.yaml
-name: pos_flutter
-description: Multi-tenant POS Flutter client
-
-version: 1.0.0+1
-
-environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.10.0"
-
-dependencies:
-  flutter:
-    sdk: flutter
-  
-  # State Management & DI
-  flutter_riverpod: ^2.4.9
-  
-  # Navigation
-  go_router: ^12.1.3
-  
-  # HTTP & Networking  
-  dio: ^5.3.2
-  
-  # Local Storage
-  flutter_secure_storage: ^9.0.0
-  
-  # Code Generation
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
-  
-  # UI
-  flutter_localizations:
-    sdk: flutter
-  intl: any
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  
-  # Code Generation
-  build_runner: ^2.4.7
-  freezed: ^2.4.6
-  json_serializable: ^6.7.1
-  
-  # Testing
-  mockito: ^5.4.2
-  
-  # Linting
-  flutter_lints: ^3.0.0
-
-flutter:
-  uses-material-design: true
-  generate: true
-```
-
-## 🧪 Testing Strategy
-
-### Unit Test Example
-
-```dart
-// test/features/auth/domain/usecases/login_usecase_test.dart
-void main() {
-  late LoginUseCase useCase;
-  late MockAuthRepository mockRepository;
-
-  setUp(() {
-    mockRepository = MockAuthRepository();
-    useCase = LoginUseCase(mockRepository);
-  });
-
-  group('LoginUseCase', () {
-    const tEmail = 'test@example.com';
-    const tPassword = 'password123';
-    final tUser = UserEntity(
-      id: 1,
-      email: tEmail,
-      name: 'Test User',
-      role: UserRole.cashier,
-      permissions: ['sales.create'],
-      tenantId: 1,
-    );
-
-    test('should return UserEntity when login is successful', () async {
-      // arrange
-      when(mockRepository.login(tEmail, tPassword))
-          .thenAnswer((_) async => Right(tUser));
-
-      // act
-      final result = await useCase(LoginParams(email: tEmail, password: tPassword));
-
-      // assert
-      expect(result, Right(tUser));
-      verify(mockRepository.login(tEmail, tPassword));
-      verifyNoMoreInteractions(mockRepository);
-    });
-
-    test('should return AuthFailure when login fails', () async {
-      // arrange
-      const tFailure = AuthFailure('Invalid credentials');
-      when(mockRepository.login(tEmail, tPassword))
-          .thenAnswer((_) async => const Left(tFailure));
-
-      // act
-      final result = await useCase(LoginParams(email: tEmail, password: tPassword));
-
-      // assert
-      expect(result, const Left(tFailure));
-      verify(mockRepository.login(tEmail, tPassword));
-      verifyNoMoreInteractions(mockRepository);
-    });
-  });
+# android/app/build.gradle
+android {
+    compileSdkVersion 34
+    ndkVersion flutter.ndkVersion
+    
+    defaultConfig {
+        applicationId "com.exvenlab.jagokasir"
+        minSdkVersion 21  # Support Android 5.0+
+        targetSdkVersion 34
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+    }
+    
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
 ```
 
-## ⚡ Development Commands
+### 7.2 Release Preparation
+- **APK optimization** untuk low-end devices
+- **Database migration strategy**
+- **Crashlytics integration**
+- **Play Store listing optimization**
 
-```bash
-# Code generation
-flutter packages pub run build_runner build --delete-conflicting-outputs
+---
 
-# Running tests
-flutter test
+## 8) Success Metrics Phase 1
 
-# Running specific test
-flutter test test/features/auth/domain/usecases/login_usecase_test.dart
+### Technical Metrics
+- [ ] **App size < 50MB** untuk distribusi mudah
+- [ ] **Startup time < 3 detik** pada device low-end
+- [ ] **Database operations < 100ms** untuk responsiveness
+- [ ] **Memory usage < 200MB** saat peak usage
 
-# Running with coverage
-flutter test --coverage
+### User Experience Metrics
+- [ ] **60-second product setup** dari install ke transaksi pertama
+- [ ] **One-hand operation** untuk 80% fitur kasir
+- [ ] **Offline reliability** 100% tanpa internet
 
-# Format code
-dart format .
+### Business Metrics
+- [ ] **100 active users** dalam 30 hari pertama
+- [ ] **80% Day-1 retention** dari installers
+- [ ] **5+ transactions per day per user** average
 
-# Analyze code
-flutter analyze
-```
+---
 
-## 🎯 MVP Implementation Order
-
-1. **Setup Project Structure** - Buat folder sesuai simplified structure
-2. **Implement Auth Feature** - Login/logout dengan complete error handling
-3. **Setup HTTP Client** - Dengan interceptors lengkap
-4. **Implement Products Feature** - CRUD products dengan pagination
-5. **Add Access Control** - Implement AccessGuard untuk authorization
-6. **Add Tests** - Unit tests untuk use cases dan repositories
-
-## 🚨 Anti-Hallucination Rules
-
-1. **Stick to the structure** - Jangan buat folder/file di luar yang didefinisikan
-2. **Follow naming exactly** - snake_case untuk file, PascalCase untuk class
-3. **Use decision trees** - Gunakan matrix untuk pilih provider type
-4. **Complete implementations** - Jangan buat skeleton code
-5. **Test everything** - Setiap use case harus ada unit test
+*Phase 1 Timeline: 12-13 minggu development + 2 minggu testing & deployment = **3.5 bulan total***
