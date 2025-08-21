@@ -18,9 +18,31 @@ INSERT INTO schema_version (version) VALUES (1);
 -- BASIC OUTLET & USER INFO
 -- =============================================
 
+CREATE TABLE tenants (
+    id TEXT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    business_type VARCHAR(100),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    address TEXT,
+    city VARCHAR(100),
+    province VARCHAR(100),
+    postal_code VARCHAR(10),
+    tax_number VARCHAR(50),
+    logo_url VARCHAR(500),
+    timezone VARCHAR(50) DEFAULT 'Asia/Jakarta',
+    currency VARCHAR(3) DEFAULT 'IDR',
+    is_active BOOLEAN DEFAULT TRUE,
+    trial_ends_at BIGINT DEFAULT NULL,
+    created_at BIGINT DEFAULT unix_now(),
+    updated_at BIGINT DEFAULT unix_now(),
+    deleted_at BIGINT DEFAULT NULL
+);
+
 -- Simplified outlet info (single outlet per device)
 CREATE TABLE outlets (
     id TEXT PRIMARY KEY,
+    tenant_id NOT NULL,
     name TEXT NOT NULL,
     code TEXT NOT NULL UNIQUE,
     description TEXT,
@@ -40,6 +62,7 @@ CREATE TABLE outlets (
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
     outlet_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'cashier', -- cashier, manager, owner
     email TEXT,
     full_name TEXT NOT NULL,
@@ -61,6 +84,7 @@ CREATE TABLE users (
 CREATE TABLE product_categories (
     id TEXT PRIMARY KEY,
     parent_id TEXT DEFAULT NULL,
+    tenant_id TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
     sort_order INTEGER DEFAULT 0,
@@ -74,6 +98,7 @@ CREATE TABLE product_categories (
 -- Products table optimized for offline use
 CREATE TABLE products (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     category_id TEXT,
     sku TEXT NOT NULL UNIQUE,
     barcode TEXT,
@@ -99,6 +124,7 @@ CREATE TABLE products (
 -- Basic customer info
 CREATE TABLE customers (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     code TEXT UNIQUE,
     name TEXT NOT NULL,
     email TEXT,
@@ -120,6 +146,7 @@ CREATE TABLE customers (
 -- Main transactions table with snapshots for offline reliability
 CREATE TABLE transactions (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     outlet_id TEXT NOT NULL,
     cashier_id TEXT NOT NULL,
     customer_id TEXT DEFAULT NULL,
@@ -200,6 +227,7 @@ CREATE TABLE transaction_payments (
 -- Simple cash drawer/shift management
 CREATE TABLE cash_shifts (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     outlet_id TEXT NOT NULL,
     cashier_id TEXT NOT NULL,
     cashier_name_snapshot TEXT NOT NULL,
@@ -228,6 +256,7 @@ CREATE TABLE cash_shifts (
 -- Simple expense tracking for daily operations
 CREATE TABLE expenses (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     outlet_id TEXT NOT NULL,
     cashier_id TEXT NOT NULL,
     cashier_name_snapshot TEXT NOT NULL,
@@ -255,6 +284,7 @@ CREATE TABLE expenses (
 -- Track which records need to be synced to cloud
 CREATE TABLE sync_queue (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     table_name TEXT NOT NULL,
     record_id TEXT NOT NULL,
     operation TEXT NOT NULL, -- insert, update, delete
@@ -268,6 +298,7 @@ CREATE TABLE sync_queue (
 -- Track sync history for debugging
 CREATE TABLE sync_history (
     id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
     sync_type TEXT NOT NULL, -- manual, auto, scheduled
     records_synced INTEGER DEFAULT 0,
     records_failed INTEGER DEFAULT 0,
@@ -284,6 +315,7 @@ CREATE TABLE sync_history (
 
 -- Local app settings and preferences
 CREATE TABLE app_settings (
+    tenant_id TEXT NOT NULL,
     key TEXT PRIMARY KEY,
     value TEXT,
     description TEXT,
