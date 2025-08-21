@@ -1,2 +1,0 @@
-// Copyright (c) 2024 ExVen POS Lite
-// This file contains generated localizations for the POS application

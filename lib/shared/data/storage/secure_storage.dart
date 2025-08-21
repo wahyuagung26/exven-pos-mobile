@@ -1,8 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../utils/constants/storage_constants.dart';
+import '../../utils/constants.dart';
 
 class SecureStorage {
-  static const _storage = FlutterSecureStorage();
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
   // Token management
   Future<void> saveToken(String token) async {

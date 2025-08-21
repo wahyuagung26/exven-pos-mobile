@@ -1,114 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../features/auth/providers.dart';
-import '../features/auth/ui/pages/login_page.dart';
-import '../features/auth/ui/pages/splash_page.dart';
-import '../shared/utils/constants/route_constants.dart';
+import 'package:jagokasir/features/auth/presentation/pages/login_page.dart';
+import 'package:jagokasir/features/products/presentation/pages/products_page.dart';
+import 'package:jagokasir/features/sales/presentation/pages/sales_page.dart';
+import 'package:jagokasir/features/settings/presentation/pages/settings_page.dart';
+import 'package:jagokasir/shared/ui/pages/home_page.dart';
+import 'package:jagokasir/shared/ui/pages/splash_page.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
-  
   return GoRouter(
-    initialLocation: RouteConstants.splash,
-    redirect: (context, state) {
-      final isAuthenticated = authState.maybeWhen(
-        authenticated: (_) => true,
-        orElse: () => false,
-      );
-      
-      final isAuthenticating = authState.maybeWhen(
-        loading: () => true,
-        initial: () => true,
-        orElse: () => false,
-      );
-      
-      final isOnSplash = state.matchedLocation == RouteConstants.splash;
-      final isOnLogin = state.matchedLocation == RouteConstants.login;
-      
-      // If still checking auth, stay on splash
-      if (isAuthenticating && isOnSplash) {
-        return null;
-      }
-      
-      // If not authenticated, redirect to login (but not from splash)
-      if (!isAuthenticated && !isOnLogin && !isOnSplash) {
-        return RouteConstants.login;
-      }
-      
-      // If unauthenticated and on splash, redirect to login
-      if (authState.maybeWhen(unauthenticated: () => true, orElse: () => false) && isOnSplash) {
-        return RouteConstants.login;
-      }
-      
-      // If authenticated and on auth pages, redirect to dashboard
-      if (isAuthenticated && (isOnLogin || isOnSplash)) {
-        return RouteConstants.dashboard;
-      }
-      
-      return null;
-    },
+    initialLocation: '/splash',
     routes: [
       GoRoute(
-        path: RouteConstants.splash,
+        path: '/splash',
         name: 'splash',
         builder: (context, state) => const SplashPage(),
       ),
       GoRoute(
-        path: RouteConstants.login,
+        path: '/login',
         name: 'login',
         builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
-        path: RouteConstants.dashboard,
-        name: 'dashboard',
-        builder: (context, state) => const DashboardPage(),
-      ),
-    ],
-  );
-});
-
-// Temporary dashboard page
-class DashboardPage extends ConsumerWidget {
-  const DashboardPage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(currentUserProvider);
-    
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              ref.read(authStateProvider.notifier).logout();
-            },
-            icon: const Icon(Icons.logout),
+        path: '/',
+        name: 'home',
+        builder: (context, state) => const HomePage(),
+        routes: [
+          GoRoute(
+            path: 'products',
+            name: 'products',
+            builder: (context, state) => const ProductsPage(),
+          ),
+          GoRoute(
+            path: 'sales',
+            name: 'sales',
+            builder: (context, state) => const SalesPage(),
+          ),
+          GoRoute(
+            path: 'settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsPage(),
           ),
         ],
       ),
+    ],
+    errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Welcome, ${user?.name ?? 'User'}!',
-              style: Theme.of(context).textTheme.headlineMedium,
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
             ),
             const SizedBox(height: 16),
             Text(
-              'Role: ${user?.role.name.toUpperCase() ?? 'Unknown'}',
-              style: Theme.of(context).textTheme.bodyLarge,
+              'Halaman tidak ditemukan',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Tenant ID: ${user?.tenantId ?? 'Unknown'}',
+              state.error?.toString() ?? '',
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Kembali ke Beranda'),
             ),
           ],
         ),
       ),
-    );
-  }
-}
+    ),
+  );
+});

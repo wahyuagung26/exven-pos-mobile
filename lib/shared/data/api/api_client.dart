@@ -3,7 +3,7 @@ import 'interceptors/auth_interceptor.dart';
 import 'interceptors/tenant_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
-import '../../utils/constants/api_constants.dart';
+import '../../utils/constants.dart';
 
 class ApiClient {
   static Dio? _instance;
@@ -18,7 +18,6 @@ class ApiClient {
       baseUrl: ApiConstants.baseUrl,
       connectTimeout: ApiConstants.connectTimeout,
       receiveTimeout: ApiConstants.receiveTimeout,
-      sendTimeout: ApiConstants.sendTimeout,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

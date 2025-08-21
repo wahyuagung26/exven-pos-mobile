@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = 'https://api.yourapp.com/v1';
+  static const String baseUrl = 'http://localhost:8080/api/v1';
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 }
@@ -7,13 +7,10 @@ class ApiConstants {
 class StorageConstants {
   static const String tokenKey = 'auth_token';
   static const String tenantIdKey = 'tenant_id';
-  static const String userKey = 'current_user';
+  static const String userKey = 'user_data';
 }
 
-class RouteConstants {
-  static const String splash = '/splash';
-  static const String login = '/login';
-  static const String dashboard = '/dashboard';
-  static const String products = '/products';
-  static const String productDetail = '/product-detail';
+class AppConstants {
+  static const String appName = 'JagoKasir';
+  static const String version = '1.0.0';
 }

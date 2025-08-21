@@ -1,592 +1,402 @@
--- Schema Database untuk Aplikasi POS Multi-Tenant (PostgreSQL)
--- Created for retail POS with multi-outlet support
+-- Schema Database untuk Aplikasi POS Offline-First (SQLite)
+-- Updated with UUID v7 and standardized timestamps
+-- Simplified for device-only operations
 
 -- =============================================
--- TENANT & SUBSCRIPTION MANAGEMENT
+-- SCHEMA VERSION TRACKING
 -- =============================================
 
--- Tabel untuk paket langganan
-CREATE TABLE subscription_plans (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-    max_outlets INTEGER NOT NULL DEFAULT 1,
-    max_users INTEGER NOT NULL DEFAULT 1,
-    max_products INTEGER DEFAULT NULL, -- NULL = unlimited
-    max_transactions_per_month INTEGER DEFAULT NULL,
-    features JSONB, -- Array fitur yang tersedia
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE schema_version (
+    version INTEGER PRIMARY KEY,
+    applied_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
 );
 
-
-
--- Tabel tenant (perusahaan/bisnis)
-CREATE TABLE tenants (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    business_type VARCHAR(100),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(20),
-    address TEXT,
-    city VARCHAR(100),
-    province VARCHAR(100),
-    postal_code VARCHAR(10),
-    tax_number VARCHAR(50),
-    logo_url VARCHAR(500),
-    timezone VARCHAR(50) DEFAULT 'Asia/Jakarta',
-    currency VARCHAR(3) DEFAULT 'IDR',
-    is_active BOOLEAN DEFAULT TRUE,
-    trial_ends_at TIMESTAMP WITH TIME ZONE NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_tenants_email ON tenants(email);
-CREATE INDEX idx_tenants_is_active ON tenants(is_active);
-
-
-
--- Tabel langganan tenant
-CREATE TYPE subscription_status AS ENUM ('active', 'cancelled', 'expired', 'pending');
-
-CREATE TABLE tenant_subscriptions (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    subscription_plan_id BIGINT NOT NULL,
-    status subscription_status DEFAULT 'pending',
-    starts_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    ends_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    auto_renew BOOLEAN DEFAULT TRUE,
-    payment_method VARCHAR(50),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (subscription_plan_id) REFERENCES subscription_plans(id)
-);
-
-CREATE INDEX idx_tenant_subscriptions_tenant_status ON tenant_subscriptions(tenant_id, status);
-CREATE INDEX idx_tenant_subscriptions_ends_at ON tenant_subscriptions(ends_at);
-
-
+-- Insert initial version
+INSERT INTO schema_version (version) VALUES (1);
 
 -- =============================================
--- USER MANAGEMENT & ROLES
+-- BASIC OUTLET & USER INFO
 -- =============================================
 
--- Tabel roles
-CREATE TABLE roles (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-    display_name VARCHAR(100) NOT NULL,
-    description TEXT,
-    permissions JSONB, -- Array permission strings
-    is_system BOOLEAN DEFAULT FALSE, -- System roles tidak bisa dihapus
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Tabel users
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255) NOT NULL,
-    phone VARCHAR(20),
-    avatar_url VARCHAR(500),
-    is_active BOOLEAN DEFAULT TRUE,
-    last_login_at TIMESTAMP WITH TIME ZONE NULL,
-    email_verified_at TIMESTAMP WITH TIME ZONE NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(id),
-    UNIQUE (tenant_id, email)
-);
-
-CREATE INDEX idx_users_tenant_active ON users(tenant_id, is_active);
-
-
-
--- =============================================
--- OUTLET MANAGEMENT
--- =============================================
-
--- Tabel outlets
+-- Simplified outlet info (single outlet per device)
 CREATE TABLE outlets (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    code VARCHAR(50) NOT NULL, -- Kode unik outlet dalam tenant
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    code TEXT NOT NULL UNIQUE,
     description TEXT,
     address TEXT,
-    city VARCHAR(100),
-    province VARCHAR(100),
-    postal_code VARCHAR(10),
-    phone VARCHAR(20),
-    email VARCHAR(255),
-    manager_id BIGINT, -- User yang bertanggung jawab
-    is_active BOOLEAN DEFAULT TRUE,
-    settings JSONB, -- Pengaturan khusus outlet (printer, tax, etc)
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL,
-    UNIQUE (tenant_id, code)
+    city TEXT,
+    province TEXT,
+    postal_code TEXT,
+    phone TEXT,
+    email TEXT,
+    settings TEXT, -- JSON string for offline settings
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL
 );
 
-CREATE INDEX idx_outlets_tenant_active ON outlets(tenant_id, is_active);
-
-
-
--- Tabel untuk assign user ke outlet
-CREATE TABLE user_outlets (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    outlet_id BIGINT NOT NULL,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+-- Basic user info for offline operation
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    outlet_id TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'cashier', -- cashier, manager, owner
+    email TEXT,
+    full_name TEXT NOT NULL,
+    phone TEXT,
+    is_active INTEGER DEFAULT 1, -- SQLite doesn't have native boolean
+    last_login_at INTEGER DEFAULT NULL,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (outlet_id) REFERENCES outlets(id) ON DELETE CASCADE,
-    UNIQUE (user_id, outlet_id)
+    FOREIGN KEY (outlet_id) REFERENCES outlets(id)
 );
-
-CREATE INDEX idx_user_outlets_outlet_active ON user_outlets(outlet_id, is_active);
 
 -- =============================================
 -- PRODUCT MANAGEMENT
 -- =============================================
 
--- Tabel kategori produk
+-- Simplified product categories
 CREATE TABLE product_categories (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    parent_id BIGINT NULL, -- Untuk sub-kategori
-    name VARCHAR(255) NOT NULL,
+    id TEXT PRIMARY KEY,
+    parent_id TEXT DEFAULT NULL,
+    name TEXT NOT NULL,
     description TEXT,
-    image_url VARCHAR(500),
     sort_order INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (parent_id) REFERENCES product_categories(id) ON DELETE SET NULL
+    FOREIGN KEY (parent_id) REFERENCES product_categories(id)
 );
 
-CREATE INDEX idx_product_categories_tenant_parent ON product_categories(tenant_id, parent_id);
-CREATE INDEX idx_product_categories_sort_order ON product_categories(sort_order);
-
-
-
--- Tabel produk
+-- Products table optimized for offline use
 CREATE TABLE products (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    category_id BIGINT,
-    sku VARCHAR(100) NOT NULL,
-    barcode VARCHAR(100),
-    name VARCHAR(255) NOT NULL,
+    id TEXT PRIMARY KEY,
+    category_id TEXT,
+    sku TEXT NOT NULL UNIQUE,
+    barcode TEXT,
+    name TEXT NOT NULL,
     description TEXT,
-    unit VARCHAR(50) DEFAULT 'pcs', -- satuan (pcs, kg, liter, dll)
-    cost_price DECIMAL(12,2) DEFAULT 0.00,
-    selling_price DECIMAL(12,2) NOT NULL,
+    unit TEXT DEFAULT 'pcs',
+    cost_price REAL DEFAULT 0.00,
+    selling_price REAL NOT NULL,
+    current_stock INTEGER DEFAULT 0, -- Simple current stock tracking
     min_stock INTEGER DEFAULT 0,
-    track_stock BOOLEAN DEFAULT TRUE,
-    is_active BOOLEAN DEFAULT TRUE,
-    images JSONB, -- Array URL gambar
-    variants JSONB, -- Array varian produk (size, color, dll)
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    track_stock INTEGER DEFAULT 1, -- 1 = true, 0 = false
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE SET NULL,
-    UNIQUE (tenant_id, sku)
+    FOREIGN KEY (category_id) REFERENCES product_categories(id)
 );
 
-CREATE INDEX idx_products_tenant_category ON products(tenant_id, category_id);
-CREATE INDEX idx_products_barcode ON products(barcode);
-CREATE INDEX idx_products_name ON products(name);
-
-
-
--- Tabel stock per outlet
-CREATE TABLE product_stocks (
-    id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL,
-    outlet_id BIGINT NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,
-    reserved_quantity INTEGER DEFAULT 0, -- Stock yang di-reserve untuk order
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    FOREIGN KEY (outlet_id) REFERENCES outlets(id) ON DELETE CASCADE,
-    UNIQUE (product_id, outlet_id)
-);
-
-CREATE INDEX idx_product_stocks_outlet_quantity ON product_stocks(outlet_id, quantity);
-
-
-
 -- =============================================
--- CUSTOMER MANAGEMENT
+-- CUSTOMER MANAGEMENT (SIMPLIFIED)
 -- =============================================
 
--- Tabel pelanggan
-CREATE TYPE gender_type AS ENUM ('male', 'female');
-
+-- Basic customer info
 CREATE TABLE customers (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    code VARCHAR(50), -- Kode pelanggan
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    phone VARCHAR(20),
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
     address TEXT,
-    city VARCHAR(100),
-    province VARCHAR(100),
-    postal_code VARCHAR(10),
-    birth_date DATE,
-    gender gender_type,
-    loyalty_points INTEGER DEFAULT 0,
-    total_spent DECIMAL(15,2) DEFAULT 0.00,
+    total_spent REAL DEFAULT 0.00,
     visit_count INTEGER DEFAULT 0,
-    last_visit_at TIMESTAMP WITH TIME ZONE NULL,
+    last_visit_at INTEGER DEFAULT NULL,
     notes TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    UNIQUE (tenant_id, code)
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL
 );
 
-CREATE INDEX idx_customers_tenant_phone ON customers(tenant_id, phone);
-CREATE INDEX idx_customers_tenant_email ON customers(tenant_id, email);
-
-
-
 -- =============================================
--- SALES & TRANSACTIONS
+-- TRANSACTIONS
 -- =============================================
 
--- Types untuk payment method dan status
-CREATE TYPE payment_method_type AS ENUM ('cash', 'card', 'transfer', 'ewallet', 'multiple');
-CREATE TYPE transaction_status_type AS ENUM ('completed', 'cancelled', 'refunded');
-
--- Tabel transaksi penjualan dengan denormalisasi customer data
+-- Main transactions table with snapshots for offline reliability
 CREATE TABLE transactions (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    outlet_id BIGINT NOT NULL,
-    cashier_id BIGINT NOT NULL,
-    customer_id BIGINT NULL,
-    -- Snapshot data customer saat transaksi (denormalisasi)
-    customer_name_snapshot VARCHAR(255),
-    customer_phone_snapshot VARCHAR(20),
-    customer_email_snapshot VARCHAR(255),
-    -- Snapshot data cashier untuk historical reference
-    cashier_name_snapshot VARCHAR(255) NOT NULL,
-    -- Snapshot data outlet untuk historical reference  
-    outlet_name_snapshot VARCHAR(255) NOT NULL,
-    outlet_code_snapshot VARCHAR(50) NOT NULL,
-    -- Data transaksi
-    transaction_number VARCHAR(100) NOT NULL UNIQUE,
-    transaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    subtotal DECIMAL(15,2) NOT NULL,
-    discount_amount DECIMAL(15,2) DEFAULT 0.00,
-    tax_amount DECIMAL(15,2) DEFAULT 0.00,
-    total_amount DECIMAL(15,2) NOT NULL,
-    paid_amount DECIMAL(15,2) NOT NULL,
-    change_amount DECIMAL(15,2) DEFAULT 0.00,
-    payment_method payment_method_type NOT NULL,
-    status transaction_status_type DEFAULT 'completed',
+    id TEXT PRIMARY KEY,
+    outlet_id TEXT NOT NULL,
+    cashier_id TEXT NOT NULL,
+    customer_id TEXT DEFAULT NULL,
+    -- Snapshot data for offline reliability
+    customer_name_snapshot TEXT,
+    customer_phone_snapshot TEXT,
+    cashier_name_snapshot TEXT NOT NULL,
+    outlet_name_snapshot TEXT NOT NULL,
+    outlet_code_snapshot TEXT NOT NULL,
+    -- Transaction data
+    transaction_number TEXT NOT NULL UNIQUE,
+    transaction_date INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    subtotal REAL NOT NULL,
+    discount_amount REAL DEFAULT 0.00,
+    tax_amount REAL DEFAULT 0.00,
+    total_amount REAL NOT NULL,
+    paid_amount REAL NOT NULL,
+    change_amount REAL DEFAULT 0.00,
+    payment_method TEXT NOT NULL, -- cash, transfer, card, ewallet
+    status TEXT DEFAULT 'completed', -- completed, cancelled
     notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    -- Sync tracking
+    synced_to_cloud INTEGER DEFAULT 0, -- 0 = not synced, 1 = synced
+    cloud_transaction_id TEXT DEFAULT NULL, -- ID from cloud after sync
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
     FOREIGN KEY (outlet_id) REFERENCES outlets(id),
     FOREIGN KEY (cashier_id) REFERENCES users(id),
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
 
-CREATE INDEX idx_transactions_tenant_outlet_date ON transactions(tenant_id, outlet_id, transaction_date);
-CREATE INDEX idx_transactions_cashier_date ON transactions(cashier_id, transaction_date);
-CREATE INDEX idx_transactions_customer_snapshot ON transactions(customer_name_snapshot, customer_phone_snapshot);
-CREATE INDEX idx_transactions_outlet_snapshot ON transactions(outlet_code_snapshot);
-CREATE INDEX idx_transactions_cashier_snapshot ON transactions(cashier_name_snapshot);
-
-
-
--- Tabel detail item penjualan dengan denormalisasi untuk historical accuracy
+-- Transaction items with product snapshots
 CREATE TABLE transaction_items (
-    id BIGSERIAL PRIMARY KEY,
-    transaction_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    -- Snapshot data produk saat transaksi (denormalisasi)
-    product_name_snapshot VARCHAR(255) NOT NULL,
-    product_sku_snapshot VARCHAR(100) NOT NULL,
-    product_category_snapshot VARCHAR(255),
-    product_unit_snapshot VARCHAR(50) DEFAULT 'pcs',
-    -- Data transaksi
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    -- Product snapshots for historical accuracy
+    product_name_snapshot TEXT NOT NULL,
+    product_sku_snapshot TEXT NOT NULL,
+    product_category_snapshot TEXT,
+    product_unit_snapshot TEXT DEFAULT 'pcs',
+    -- Transaction item data
     quantity INTEGER NOT NULL,
-    unit_price DECIMAL(12,2) NOT NULL,
-    cost_price_snapshot DECIMAL(12,2) DEFAULT 0.00, -- Untuk profit calculation
-    discount_amount DECIMAL(12,2) DEFAULT 0.00,
-    total_price DECIMAL(15,2) NOT NULL,
+    unit_price REAL NOT NULL,
+    cost_price_snapshot REAL DEFAULT 0.00,
+    discount_amount REAL DEFAULT 0.00,
+    total_price REAL NOT NULL,
     notes TEXT,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
-CREATE INDEX idx_transaction_items_transaction ON transaction_items(transaction_id);
-CREATE INDEX idx_transaction_items_product ON transaction_items(product_id);
-CREATE INDEX idx_transaction_items_product_sku_snapshot ON transaction_items(product_sku_snapshot);
-CREATE INDEX idx_transaction_items_product_name_snapshot ON transaction_items(product_name_snapshot);
-
--- Tabel pembayaran (untuk multiple payment method)
-CREATE TYPE payment_method_single AS ENUM ('cash', 'card', 'transfer', 'ewallet');
-
+-- Multiple payment methods support
 CREATE TABLE transaction_payments (
-    id BIGSERIAL PRIMARY KEY,
-    transaction_id BIGINT NOT NULL,
-    payment_method payment_method_single NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    reference_number VARCHAR(100), -- Nomor referensi untuk non-cash
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    payment_method TEXT NOT NULL, -- cash, card, transfer, ewallet
+    amount REAL NOT NULL,
+    reference_number TEXT, -- For non-cash payments
     notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_transaction_payments_transaction ON transaction_payments(transaction_id);
-
 -- =============================================
--- STOCK MOVEMENTS & INVENTORY
+-- CASH MANAGEMENT (SHIFT TRACKING)
 -- =============================================
 
--- Types untuk stock movement
-CREATE TYPE movement_type AS ENUM ('in', 'out', 'adjustment', 'transfer');
-CREATE TYPE reference_type AS ENUM ('sale', 'purchase', 'adjustment', 'transfer', 'initial');
-
-CREATE TABLE stock_movements (
-    id BIGSERIAL PRIMARY KEY,
-    product_id BIGINT NOT NULL,
-    outlet_id BIGINT NOT NULL,
-    movement_type movement_type NOT NULL,
-    quantity INTEGER NOT NULL, -- Bisa negatif untuk stock out
-    reference_type reference_type NOT NULL,
-    reference_id BIGINT, -- ID dari transaksi terkait
+-- Simple cash drawer/shift management
+CREATE TABLE cash_shifts (
+    id TEXT PRIMARY KEY,
+    outlet_id TEXT NOT NULL,
+    cashier_id TEXT NOT NULL,
+    cashier_name_snapshot TEXT NOT NULL,
+    shift_start INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    shift_end INTEGER DEFAULT NULL,
+    opening_balance REAL DEFAULT 0.00,
+    closing_balance REAL DEFAULT NULL,
+    expected_cash REAL DEFAULT NULL,
+    cash_sales REAL DEFAULT 0.00,
+    non_cash_sales REAL DEFAULT 0.00,
+    total_transactions INTEGER DEFAULT 0,
     notes TEXT,
-    created_by BIGINT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'open', -- open, closed
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    FOREIGN KEY (outlet_id) REFERENCES outlets(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+    FOREIGN KEY (outlet_id) REFERENCES outlets(id),
+    FOREIGN KEY (cashier_id) REFERENCES users(id)
 );
-
-CREATE INDEX idx_stock_movements_product_outlet ON stock_movements(product_id, outlet_id);
-CREATE INDEX idx_stock_movements_outlet_date ON stock_movements(outlet_id, created_at);
-CREATE INDEX idx_stock_movements_reference ON stock_movements(reference_type, reference_id);
 
 -- =============================================
--- BACKUP TABLES FOR DATA RETENTION
+-- EXPENSES TRACKING
 -- =============================================
 
--- Tabel backup transaksi untuk tenant gratis
-CREATE TABLE archived_transactions (
-    id BIGINT PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    outlet_id BIGINT NOT NULL,
-    cashier_id BIGINT NOT NULL,
-    customer_id BIGINT NULL,
-    -- Snapshot data customer saat transaksi (denormalisasi)
-    customer_name_snapshot VARCHAR(255),
-    customer_phone_snapshot VARCHAR(20),
-    customer_email_snapshot VARCHAR(255),
-    -- Snapshot data cashier untuk historical reference
-    cashier_name_snapshot VARCHAR(255) NOT NULL,
-    -- Snapshot data outlet untuk historical reference  
-    outlet_name_snapshot VARCHAR(255) NOT NULL,
-    outlet_code_snapshot VARCHAR(50) NOT NULL,
-    -- Data transaksi
-    transaction_number VARCHAR(100) NOT NULL,
-    transaction_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    subtotal DECIMAL(15,2) NOT NULL,
-    discount_amount DECIMAL(15,2) DEFAULT 0.00,
-    tax_amount DECIMAL(15,2) DEFAULT 0.00,
-    total_amount DECIMAL(15,2) NOT NULL,
-    paid_amount DECIMAL(15,2) NOT NULL,
-    change_amount DECIMAL(15,2) DEFAULT 0.00,
-    payment_method payment_method_type NOT NULL,
-    status transaction_status_type DEFAULT 'completed',
+-- Simple expense tracking for daily operations
+CREATE TABLE expenses (
+    id TEXT PRIMARY KEY,
+    outlet_id TEXT NOT NULL,
+    cashier_id TEXT NOT NULL,
+    cashier_name_snapshot TEXT NOT NULL,
+    category TEXT NOT NULL, -- operasional, bahan_baku, transport, dll
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    expense_date INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    receipt_photo TEXT, -- Base64 or file path
     notes TEXT,
-    original_created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    original_updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    archived_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    archived_reason VARCHAR(100) DEFAULT 'data_retention_policy'
-);
-
-CREATE INDEX idx_archived_transactions_tenant_date ON archived_transactions(tenant_id, transaction_date);
-CREATE INDEX idx_archived_transactions_number ON archived_transactions(transaction_number);
-CREATE INDEX idx_archived_transactions_archived_date ON archived_transactions(archived_at);
-
--- Tabel backup detail item penjualan 
-CREATE TABLE archived_transaction_items (
-    id BIGINT PRIMARY KEY,
-    transaction_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    -- Snapshot data yang sudah tersimpan dari tabel asli
-    product_name_snapshot VARCHAR(255) NOT NULL,
-    product_sku_snapshot VARCHAR(100) NOT NULL,
-    product_category_snapshot VARCHAR(255),
-    product_unit_snapshot VARCHAR(50) DEFAULT 'pcs',
-    quantity INTEGER NOT NULL,
-    unit_price DECIMAL(12,2) NOT NULL,
-    cost_price_snapshot DECIMAL(12,2) DEFAULT 0.00,
-    discount_amount DECIMAL(12,2) DEFAULT 0.00,
-    total_price DECIMAL(15,2) NOT NULL,
-    notes TEXT,
-    archived_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_archived_transaction_items_transaction ON archived_transaction_items(transaction_id);
-CREATE INDEX idx_archived_transaction_items_product_sku_snapshot ON archived_transaction_items(product_sku_snapshot);
-CREATE INDEX idx_archived_transaction_items_archived_date ON archived_transaction_items(archived_at);
-
--- Tabel backup pembayaran
-CREATE TABLE archived_transaction_payments (
-    id BIGINT PRIMARY KEY,
-    transaction_id BIGINT NOT NULL,
-    payment_method payment_method_single NOT NULL,
-    amount DECIMAL(15,2) NOT NULL,
-    reference_number VARCHAR(100),
-    notes TEXT,
-    original_created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    archived_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_archived_transaction_payments_transaction ON archived_transaction_payments(transaction_id);
-CREATE INDEX idx_archived_transaction_payments_archived_date ON archived_transaction_payments(archived_at);
-
--- Types untuk data retention
-CREATE TYPE retention_type AS ENUM ('transaction_archive', 'transaction_delete', 'audit_cleanup');
-CREATE TYPE retention_status AS ENUM ('success', 'failed', 'partial');
-
--- Tabel untuk tracking data retention policy
-CREATE TABLE data_retention_logs (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    retention_type retention_type NOT NULL,
-    records_affected INTEGER NOT NULL,
-    date_from DATE NOT NULL,
-    date_to DATE NOT NULL,
-    execution_time DECIMAL(8,3), -- dalam detik
-    status retention_status DEFAULT 'success',
-    error_message TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    -- Sync tracking
+    synced_to_cloud INTEGER DEFAULT 0,
+    cloud_expense_id TEXT DEFAULT NULL,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    deleted_at INTEGER DEFAULT NULL,
     
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+    FOREIGN KEY (outlet_id) REFERENCES outlets(id),
+    FOREIGN KEY (cashier_id) REFERENCES users(id)
 );
 
-CREATE INDEX idx_data_retention_logs_tenant_type_date ON data_retention_logs(tenant_id, retention_type, created_at);
-
 -- =============================================
--- SYSTEM & AUDIT
+-- SYNC TRACKING & CLOUD BACKUP
 -- =============================================
 
--- Tabel untuk audit log
-CREATE TABLE audit_logs (
-    id BIGSERIAL PRIMARY KEY,
-    tenant_id BIGINT NOT NULL,
-    user_id BIGINT,
-    action VARCHAR(100) NOT NULL,
-    table_name VARCHAR(100),
-    record_id BIGINT,
-    old_values JSONB,
-    new_values JSONB,
-    ip_address INET,
-    user_agent TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+-- Track which records need to be synced to cloud
+CREATE TABLE sync_queue (
+    id TEXT PRIMARY KEY,
+    table_name TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    operation TEXT NOT NULL, -- insert, update, delete
+    data TEXT, -- JSON string of the record
+    retry_count INTEGER DEFAULT 0,
+    last_error TEXT DEFAULT NULL,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
 );
 
-CREATE INDEX idx_audit_logs_tenant_date ON audit_logs(tenant_id, created_at);
-CREATE INDEX idx_audit_logs_user_date ON audit_logs(user_id, created_at);
-CREATE INDEX idx_audit_logs_table_record ON audit_logs(table_name, record_id);
+-- Track sync history for debugging
+CREATE TABLE sync_history (
+    id TEXT PRIMARY KEY,
+    sync_type TEXT NOT NULL, -- manual, auto, scheduled
+    records_synced INTEGER DEFAULT 0,
+    records_failed INTEGER DEFAULT 0,
+    sync_start INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+    sync_end INTEGER DEFAULT NULL,
+    status TEXT DEFAULT 'running', -- running, completed, failed
+    error_message TEXT DEFAULT NULL,
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+);
 
 -- =============================================
--- INDEXES TAMBAHAN UNTUK PERFORMA
+-- APP SETTINGS & CONFIGURATION
 -- =============================================
 
--- Index untuk reporting dan analytics
-CREATE INDEX idx_sales_tenant_date_status ON transactions(tenant_id, transaction_date, status);
-CREATE INDEX idx_sales_outlet_date_total ON transactions(outlet_id, transaction_date, total_amount);
-CREATE INDEX idx_customers_tenant_visit ON customers(tenant_id, last_visit_at);
-CREATE INDEX idx_products_tenant_active ON products(tenant_id, is_active);
+-- Local app settings and preferences
+CREATE TABLE app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    description TEXT,
+    updated_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+);
+
+-- Insert default settings
+INSERT INTO app_settings (key, value, description) VALUES 
+('app_version', '1.0.0', 'Current app version'),
+('last_backup', NULL, 'Last successful backup timestamp'),
+('auto_backup_enabled', '1', 'Enable automatic cloud backup'),
+('receipt_printer_enabled', '0', 'Enable receipt printer'),
+('low_stock_alert', '1', 'Enable low stock alerts'),
+('tax_enabled', '0', 'Enable tax calculation'),
+('default_tax_rate', '11.0', 'Default tax rate percentage'),
+('currency_symbol', 'Rp', 'Currency symbol for display'),
+('receipt_footer_text', 'Terima kasih atas kunjungan Anda!', 'Footer text for receipts');
 
 -- =============================================
--- SAMPLE DATA ROLES
+-- INDEXES FOR PERFORMANCE
 -- =============================================
 
-INSERT INTO roles (name, display_name, description, permissions, is_system) VALUES 
-('super_admin', 'Super Admin', 'Full system access', '["*"]', TRUE),
-('tenant_owner', 'Pemilik Bisnis', 'Full access dalam tenant', '["tenant.*"]', TRUE),
-('manager', 'Manager', 'Mengelola outlet dan laporan', '["outlet.*", "reports.*", "products.*", "customers.*"]', TRUE),
-('cashier', 'Kasir', 'Melakukan penjualan', '["sales.*", "customers.read", "products.read"]', TRUE);
+-- Indexes for better query performance
+CREATE INDEX idx_products_sku ON products(sku) WHERE deleted_at IS NULL;
+CREATE INDEX idx_products_barcode ON products(barcode) WHERE deleted_at IS NULL;
+CREATE INDEX idx_products_name ON products(name) WHERE deleted_at IS NULL;
+CREATE INDEX idx_products_category ON products(category_id) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_transactions_date ON transactions(transaction_date) WHERE deleted_at IS NULL;
+CREATE INDEX idx_transactions_cashier ON transactions(cashier_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_transactions_status ON transactions(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_transactions_sync ON transactions(synced_to_cloud) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_transaction_items_transaction ON transaction_items(transaction_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_transaction_items_product ON transaction_items(product_id) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_customers_phone ON customers(phone) WHERE deleted_at IS NULL;
+CREATE INDEX idx_customers_code ON customers(code) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_cash_shifts_cashier_date ON cash_shifts(cashier_id, shift_start) WHERE deleted_at IS NULL;
+CREATE INDEX idx_cash_shifts_status ON cash_shifts(status) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_expenses_date ON expenses(expense_date) WHERE deleted_at IS NULL;
+CREATE INDEX idx_expenses_category ON expenses(category) WHERE deleted_at IS NULL;
+CREATE INDEX idx_expenses_sync ON expenses(synced_to_cloud) WHERE deleted_at IS NULL;
+
+CREATE INDEX idx_sync_queue_table_operation ON sync_queue(table_name, operation);
+CREATE INDEX idx_sync_queue_retry ON sync_queue(retry_count);
 
 -- =============================================
--- SAMPLE SUBSCRIPTION PLANS
+-- VIEWS FOR COMMON QUERIES
 -- =============================================
 
-INSERT INTO subscription_plans (name, description, price, max_outlets, max_users, features) VALUES 
-('Free', 'Paket gratis dengan batasan fitur dan retensi data 14 hari', 0.00, 1, 2, '["basic_pos", "basic_reports", "data_retention_14_days"]'),
-('Starter', 'Paket untuk bisnis kecil', 99000.00, 2, 5, '["full_pos", "advanced_reports", "customer_management", "data_retention_unlimited"]'),
-('Business', 'Paket untuk bisnis menengah', 299000.00, 5, 15, '["full_pos", "advanced_reports", "customer_management", "inventory_management", "multi_payment", "data_retention_unlimited"]'),
-('Enterprise', 'Paket untuk bisnis besar', 599000.00, 999, 999, '["full_pos", "advanced_reports", "customer_management", "inventory_management", "multi_payment", "api_access", "custom_integration", "data_retention_unlimited"]');
-
--- =============================================
--- VIEWS FOR EASY ACCESS TO TRANSACTION DATA
--- =============================================
-
--- View untuk melihat semua transaksi (aktif + archived) dengan denormalized data
-CREATE VIEW all_transactions_view AS
+-- View for daily sales summary
+CREATE VIEW daily_sales_summary AS
 SELECT 
-    id, tenant_id, outlet_id, cashier_id, customer_id, 
-    customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot,
-    cashier_name_snapshot, outlet_name_snapshot, outlet_code_snapshot,
-    transaction_number, transaction_date, subtotal, discount_amount, tax_amount, 
-    total_amount, paid_amount, change_amount, payment_method, status, notes,
-    original_created_at as created_at, original_updated_at as updated_at,
-    'archived' as data_source
-FROM archived_transactions
-UNION ALL
+    DATE(transaction_date / 1000, 'unixepoch', 'localtime') as sale_date,
+    COUNT(*) as total_transactions,
+    SUM(total_amount) as total_sales,
+    SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END) as cash_sales,
+    SUM(CASE WHEN payment_method != 'cash' THEN total_amount ELSE 0 END) as non_cash_sales,
+    AVG(total_amount) as average_transaction
+FROM transactions 
+WHERE deleted_at IS NULL AND status = 'completed'
+GROUP BY DATE(transaction_date / 1000, 'unixepoch', 'localtime')
+ORDER BY sale_date DESC;
+
+-- View for top selling products
+CREATE VIEW top_selling_products AS
 SELECT 
-    id, tenant_id, outlet_id, cashier_id, customer_id,
-    customer_name_snapshot, customer_phone_snapshot, customer_email_snapshot,
-    cashier_name_snapshot, outlet_name_snapshot, outlet_code_snapshot,
-    transaction_number, transaction_date, subtotal, discount_amount, tax_amount,
-    total_amount, paid_amount, change_amount, payment_method, status, notes,
-    created_at, updated_at,
-    'active' as data_source
-FROM transactions;
+    ti.product_id,
+    ti.product_name_snapshot as product_name,
+    ti.product_sku_snapshot as product_sku,
+    SUM(ti.quantity) as total_quantity,
+    SUM(ti.total_price) as total_revenue,
+    COUNT(DISTINCT ti.transaction_id) as transaction_count
+FROM transaction_items ti
+JOIN transactions t ON ti.transaction_id = t.id
+WHERE ti.deleted_at IS NULL 
+    AND t.deleted_at IS NULL 
+    AND t.status = 'completed'
+GROUP BY ti.product_id, ti.product_name_snapshot, ti.product_sku_snapshot
+ORDER BY total_quantity DESC;
+
+-- View for low stock products
+CREATE VIEW low_stock_products AS
+SELECT 
+    id,
+    sku,
+    name,
+    current_stock,
+    min_stock,
+    (min_stock - current_stock) as stock_deficit
+FROM products 
+WHERE deleted_at IS NULL 
+    AND track_stock = 1 
+    AND current_stock <= min_stock
+ORDER BY stock_deficit DESC;
 
 -- =============================================
--- ADDITIONAL INDEXES FOR PERFORMANCE
+-- NOTE: NO TRIGGERS - ALL LOGIC IN SERVICE LAYER
 -- =============================================
 
--- Index untuk archived tables performance
-CREATE INDEX idx_archived_trans_tenant_date ON archived_transactions(tenant_id, transaction_date);
-CREATE INDEX idx_archived_items_trans_product ON archived_transaction_items(transaction_id, product_id);
+-- All business logic operations will be handled in Flutter/Dart service layer:
+-- 1. updated_at fields will be managed by service methods
+-- 2. Customer stats updates handled by TransactionService
+-- 3. Product stock updates handled by InventoryService  
+-- 4. Sync queue managed by SyncService
+-- 5. Manual transaction management for data consistency
+--
+-- Benefits:
+-- - Predictable performance
+-- - Easy debugging and testing
+-- - Explicit error handling
+-- - Better separation of concerns
+-- - No hidden side effects

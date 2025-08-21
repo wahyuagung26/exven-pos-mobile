@@ -1,15 +1,19 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+// Temporary implementation until build_runner generates the actual Freezed files
 
-part 'pagination_entity.freezed.dart';
+class PaginationEntity {
+  final int currentPage;
+  final int totalPages;
+  final int totalItems;
+  final int itemsPerPage;
+  final bool hasNextPage;
+  final bool hasPreviousPage;
 
-@freezed
-class PaginationEntity with _$PaginationEntity {
-  const factory PaginationEntity({
-    required int currentPage,
-    required int totalPages,
-    required int totalItems,
-    required int itemsPerPage,
-    required bool hasNextPage,
-    required bool hasPreviousPage,
-  }) = _PaginationEntity;
+  const PaginationEntity({
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalItems,
+    required this.itemsPerPage,
+    required this.hasNextPage,
+    required this.hasPreviousPage,
+  });
 }
