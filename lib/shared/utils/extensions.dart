@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 extension StringExtensions on String {
   bool get isValidEmail =>
       RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(this);
-  
+
   String get capitalize {
     if (isEmpty) {
       return this;
@@ -16,7 +16,7 @@ extension ContextExtensions on BuildContext {
   ThemeData get theme => Theme.of(this);
   TextTheme get textTheme => theme.textTheme;
   ColorScheme get colorScheme => theme.colorScheme;
-  
+
   void showErrorSnackBar(String message) {
     ScaffoldMessenger.of(this).showSnackBar(
       SnackBar(
@@ -25,7 +25,7 @@ extension ContextExtensions on BuildContext {
       ),
     );
   }
-  
+
   void showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(this).showSnackBar(
       SnackBar(
