@@ -3,7 +3,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'pagination_model.dart';
 
 part 'api_response_model.freezed.dart';
-part 'api_response_model.g.dart';
 
 /// Standard API response wrapper model
 @Freezed(genericArgumentFactories: true)
@@ -29,12 +28,6 @@ class ApiResponseModel<T> with _$ApiResponseModel<T> {
     String? requestId,
   }) = _ApiResponseModel<T>;
 
-  /// Creates an API response from JSON
-  factory ApiResponseModel.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object?) fromJsonT,
-  ) =>
-      _$ApiResponseModelFromJson(json, fromJsonT);
 
   /// Private constructor for custom methods
   const ApiResponseModel._();
@@ -68,12 +61,6 @@ class SuccessResponse<T> with _$SuccessResponse<T> {
     PaginationModel? meta,
   }) = _SuccessResponse<T>;
 
-  /// Creates a success response from JSON
-  factory SuccessResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object?) fromJsonT,
-  ) =>
-      _$SuccessResponseFromJson(json, fromJsonT);
 }
 
 /// Error response model
@@ -133,12 +120,6 @@ class PaginatedResponse<T> with _$PaginatedResponse<T> {
     String? requestId,
   }) = _PaginatedResponse<T>;
 
-  /// Creates a paginated response from JSON
-  factory PaginatedResponse.fromJson(
-    Map<String, dynamic> json,
-    T Function(Object?) fromJsonT,
-  ) =>
-      _$PaginatedResponseFromJson(json, fromJsonT);
 
   /// Private constructor for custom methods
   const PaginatedResponse._();

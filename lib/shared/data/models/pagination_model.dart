@@ -85,12 +85,12 @@ class PaginationModel with _$PaginationModel {
       totalPages: json['last_page'] as int,
       perPage: json['per_page'] as int,
       totalItems: json['total'] as int,
-      hasNextPage: json['current_page'] < json['last_page'],
-      hasPreviousPage: json['current_page'] > 1,
-      nextPage: json['current_page'] < json['last_page']
+      hasNextPage: (json['current_page'] as int) < (json['last_page'] as int),
+      hasPreviousPage: (json['current_page'] as int) > 1,
+      nextPage: (json['current_page'] as int) < (json['last_page'] as int)
           ? (json['current_page'] as int) + 1
           : null,
-      previousPage: json['current_page'] > 1
+      previousPage: (json['current_page'] as int) > 1
           ? (json['current_page'] as int) - 1
           : null,
       from: json['from'] as int?,

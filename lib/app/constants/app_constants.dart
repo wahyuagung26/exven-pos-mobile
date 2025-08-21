@@ -98,8 +98,8 @@ class AppConstants {
   static const String defaultTimezone = 'Asia/Jakarta';
   
   // Business Rules
-  static const double maxDiscountPercentage = 100.0;
-  static const double maxTaxPercentage = 50.0;
+  static const double maxDiscountPercentage = 100;
+  static const double maxTaxPercentage = 50;
   static const int maxTransactionItems = 100;
   static const double minTransactionAmount = 0.01;
   static const double maxTransactionAmount = 999999999.99;
@@ -114,11 +114,11 @@ class AppConstants {
   // Grid Configuration
   static const int productGridCrossAxisCount = 2;
   static const double productGridChildAspectRatio = 0.75;
-  static const double gridSpacing = 8.0;
+  static const double gridSpacing = 8;
   
   // List Configuration
-  static const double listItemHeight = 72.0;
-  static const double compactListItemHeight = 56.0;
+  static const double listItemHeight = 72;
+  static const double compactListItemHeight = 56;
   static const int maxSearchResults = 50;
   
   // Error Messages

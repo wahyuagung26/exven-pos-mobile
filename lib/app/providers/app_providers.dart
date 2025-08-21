@@ -109,13 +109,13 @@ Future<bool> _refreshToken(Ref ref) async {
       final data = response.data;
       await secureStorage.write(
         key: AppConstants.accessTokenKey, 
-        value: data['access_token'],
+        value: data['access_token']?.toString(),
       );
       
       if (data['refresh_token'] != null) {
         await secureStorage.write(
           key: AppConstants.refreshTokenKey,
-          value: data['refresh_token'],
+          value: data['refresh_token']?.toString(),
         );
       }
       
@@ -156,9 +156,9 @@ final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
     accessibility: KeychainAccessibility.first_unlock_this_device,
   );
   
-  const linuxOptions = LinuxOptions();
+  const linuxOptions = LinuxOptions.defaultOptions;
   
-  const windowsOptions = WindowsOptions();
+  const windowsOptions = WindowsOptions.defaultOptions;
   
   const webOptions = WebOptions(
     dbName: AppConstants.appName,
